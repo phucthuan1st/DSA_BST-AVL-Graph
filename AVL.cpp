@@ -23,29 +23,18 @@ int degree_node(Node *node) {
 int heightOfNode(Node* root);
 void rebalance(Node* &root);
 
-bool add_node(Node* &root, int key) {
-    static Node* parent = root;
-    if (!root) {
-        Node* node = new Node(key);
-        if (!node) {
-            cout << "cannot create new node" << endl;
-            return false;
-        }
-        root = node;
-        return true;
+void add_node(Node* &root, int key) {
+    if (!root) 
+        root = new Node(key);
+    else if (root->key > key) {
+        add_node(root->left_child, key);
+    }
+    else if (root->key < key) {
+        add_node(root->right_child, key);
     }
     else {
-        if (root->key == key) {
-            return false;
-        }
-        else if (root->key > key) {
-            parent = root;
-            return add_node(root->left_child, key);
-        }
-        else {
-            parent = root;
-            return add_node(root->right_child, key);
-        }
+        cout << key << " is already in tree" << endl;
+        return;
     }
     rebalance(root);
 }
@@ -57,6 +46,15 @@ void LNR(Node* root) {
         LNR(root->left_child);
         cout << root->key << " ";
         LNR(root->right_child);
+    }
+}
+
+void NLR(Node* root) {
+    if (root)
+    {
+        cout << root->key << " ";
+        NLR(root->left_child);
+        NLR(root->right_child);
     }
 }
 
@@ -99,31 +97,21 @@ void rebalance(Node* &root) {
 
     int delta = getBalanceFactor(root);
     
-    if (delta == 0 || delta == 1 || delta == -1)
-        return;
-    else {
-        //left > right
-        if (delta > 1) {
-            Node* left = root->left_child;
-            if (heightOfNode(left->left_child) >= heightOfNode(left->right_child)) {
-                right_rotate(left);
-            }
-            else {
-                left_rotate(left->left_child);
-                right_rotate(left);
-            }
-        }
-        //right > left
-        else if (delta < -1) {
-            Node* right = root->right_child;
-            if (heightOfNode(right->right_child) >= heightOfNode(right->left_child)) {
-                left_rotate(right);
-            }
-            else {
-                right_rotate(right->right_child);
-                left_rotate(right);
-            }
-        }
+    if (delta > 1) {
+        int child_delta = getBalanceFactor(root->left_child);
+        
+        if (child_delta < 0) 
+            left_rotate(root->left_child);
+        
+        right_rotate(root);
+    }
+    else if (delta < -1) {
+        int child_delta = getBalanceFactor(root->right_child);
+        
+        if (child_delta > 0) 
+            right_rotate(root->right_child);
+        
+        left_rotate(root);
     }
 }
 
@@ -153,10 +141,7 @@ Node* createTree(int arr[], int n) {
     Node* root = new Node(arr[0]);
 
     for (int i = 1; i < n; i++) {
-        if (!add_node(root, arr[i]))
-            cout << "Error: cannot add " << arr[i]  << " to tree!"<< endl;
-        else 
-            cout << "Added " << arr[i] << " to tree!"<< endl;
+        add_node(root, arr[i]);
     }
 
     return root;
@@ -185,19 +170,31 @@ void removeNode(Node* &root, int key) {
             Node* saver = root->right_child;
             delete root;
             root = saver;
-            return;
         }
         else if (root->right_child == NULL) {
             Node* saver = root->left_child;
             delete root;
             root = saver;
-            return;
         }
+        else {
+            Node* replace = replacement(root->right_child);
+            root->key = replace->key;
+            removeNode(root->right_child, replace->key);
+        }
+    }
+    if (root)
+        rebalance(root);
+    return;
+}
 
-        Node* replace = replacement(root->right_child);
-        root->key = replace->key;
-        removeNode(root->right_child, replace->key);
-        return;
+void RemoveNode(Node* &root, int key) {
+    Node* find = findNode(root, key);
+    if (find) {
+        removeNode(root, key);
+        rebalance(root);
+    }
+    else {
+        cout << "Cant find node " << key << endl;
     }
 }
 
@@ -231,15 +228,37 @@ int main() {
     a[rand()%35] = 23;
     a[rand()%35] = 35;
     Node* root = createTree(a, 35);
+    cout << "LNR tree: ";
     LNR(root);
     cout << endl;
+    cout << "NLR tree: ";
+    NLR(root);
+    cout << endl;
+    cout << "Level-order tree: ";
     levelOrder(root);
     cout << endl;
-    removeNode(root, 35);
+    //remove test
     removeNode(root, 23);
+    cout << "LNR after removing 23: ";
     LNR(root);
     cout << endl;
+    cout << "NLR after removing 23: ";
+    NLR(root);
+    cout << endl;
+    cout << "Level-order tree after removing 23: ";
     levelOrder(root);
-    cout << "\nGiven tree is" << (isBST(root) ? " BST" : " not BST") << endl;
+    cout << endl;
+    //remove test
+    removeNode(root, 35);
+    cout << "LNR after removing 35: ";
+    LNR(root);
+    cout << endl;
+    cout << "NLR after removing 35: ";
+    NLR(root);
+    cout << endl;
+    cout << "Level-order tree after removing 35: ";
+    levelOrder(root);
+    cout << endl;
+    // cout << "\nGiven tree is" << (isBST(root) ? " BST" : " not BST") << endl;
     return 0;
 }
